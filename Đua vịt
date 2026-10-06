@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đua Vịt</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #eaf7ff;
+    color: #222;
+}
+
+.container {
+    max-width: 1000px;
+    margin: auto;
+    padding: 15px;
+}
+
+h1 {
+    text-align: center;
+    color: #168bd1;
+}
+
+.panel {
+    background: white;
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 3px 15px #0002;
+    margin-bottom: 15px;
+}
+
+textarea {
+    width: 100%;
+    height: 130px;
+    resize: vertical;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+button {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 10px;
+    margin: 6px 3px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.start {
+    background: #12b86a;
+    color: white;
+}
+
+.reset {
+    background: #eee;
+}
+
+.track {
+    position: relative;
+    background: linear-gradient(#20a9ee, #087ed2);
+    border-radius: 15px;
+    overflow: hidden;
+    padding: 10px 0;
+}
+
+.lane {
+    height: 65px;
+    position: relative;
+    border-bottom: 1px dashed #ffffff55;
+}
+
+.duck {
+    position: absolute;
+    left: 5px;
+    top: 8px;
+    width: 52px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    transition: left .05s linear;
+}
+
+.name {
+    position: absolute;
+    left: 60px;
+    top: 23px;
+    color: white;
+    font-weight: bold;
+    font-size: 13px;
+    text-shadow: 1px 1px 2px #000;
+}
+
+.finish {
+    position: absolute;
+    right: 45px;
+    top: 0;
+    bottom: 0;
+    width: 8px;
+    background: repeating-linear-gradient(
+        45deg,
+        white 0px,
+        white 10px,
+        black 10px,
+        black 20px
+    );
+}
+
+.finishText {
+    position: absolute;
+    right: 0;
+    top: 5px;
+    background: #e53935;
+    color: white;
+    padding: 5px;
+    writing-mode: vertical-rl;
+    font-weight: bold;
+}
+
+.result {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    margin-top: 15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🏁 ĐUA VỊT 🦆</h1>
+
+    <div class="panel">
+        <h3>Danh sách người chơi</h3>
+
+        <textarea id="names">Dũng
+Hà
+Bình
+Chi
+Phước
+Đức
+Lan
+Tâm
+Thủy</textarea>
+
+        <br>
+
+        <button class="start" onclick="startRace()">
+            🦆 Bắt đầu cuộc đua
+        </button>
+
+        <button class="reset" onclick="resetRace()">
+            🔄 Chơi lại
+        </button>
+    </div>
+
+    <div class="panel">
+        <div id="track" class="track">
+            <div class="finish"></div>
+            <div class="finishText">ĐÍCH</div>
+        </div>
+
+        <div id="result" class="result"></div>
+    </div>
+
+</div>
+
+<script>
+
+let racing = false;
+let animation;
+
+const colors = [
+    "#ffd43b",
+    "#ff922b",
+    "#74c69d",
+    "#74c0fc",
+    "#da77f2",
+    "#ff6b6b",
+    "#69db7c",
+    "#f783ac",
+    "#adb5bd",
+    "#ffa94d"
+];
+
+function createRace() {
+
+    const track = document.getElementById("track");
+
+    track.querySelectorAll(".lane").forEach(x => x.remove());
+
+    const text = document.getElementById("names").value;
+
+    const names = text
+        .split("\n")
+        .map(x => x.trim())
+        .filter(x => x !== "");
+
+    names.forEach((name, index) => {
+
+        const lane = document.createElement("div");
+        lane.className = "lane";
+
+        const duck = document.createElement("div");
+        duck.className = "duck";
+        duck.id = "duck-" + index;
+
+        duck.textContent = "🦆";
+
+        const nameTag = document.createElement("div");
+        nameTag.className = "name";
+        nameTag.textContent = name;
+
+        duck.style.filter =
+            `hue-rotate(${index * 35}deg)`;
+
+        lane.appendChild(duck);
+        lane.appendChild(nameTag);
+
+        track.appendChild(lane);
+    });
+
+    return names;
+}
+
+function startRace() {
+
+    if (racing) return;
+
+    const names = createRace();
+
+    if (names.length < 2) {
+        alert("Phải có ít nhất 2 người chơi!");
+        return;
+    }
+
+    racing = true;
+
+    document.getElementById("result").textContent =
+        "🏁 Đang đua...";
+
+    const ducks = [];
+
+    names.forEach((name, index) => {
+
+        ducks.push({
+            index: index,
+            position: 0,
+
+            // tốc độ ngẫu nhiên
+            speed: 1.2 + Math.random() * 2.5
+        });
+
+    });
+
+    const finishDistance =
+        document.getElementById("track").clientWidth - 120;
+
+    function race() {
+
+        for (const duck of ducks) {
+
+            // thêm một chút ngẫu nhiên để nhìn tự nhiên
+            duck.position +=
+                duck.speed * (0.8 + Math.random() * 0.5);
+
+            const element =
+                document.getElementById(
+                    "duck-" + duck.index
+                );
+
+            element.style.left =
+                Math.min(
+                    duck.position,
+                    finishDistance
+                ) + "px";
+
+            if (duck.position >= finishDistance) {
+
+                racing = false;
+
+                document.getElementById("result").innerHTML =
+                    "🏆 Người thắng: <b>" +
+                    names[duck.index] +
+                    "</b> 🦆";
+
+                return;
+            }
+        }
+
+        animation = requestAnimationFrame(race);
+    }
+
+    animation = requestAnimationFrame(race);
+}
+
+function resetRace() {
+
+    cancelAnimationFrame(animation);
+
+    racing = false;
+
+    document.getElementById("result").textContent = "";
+
+    createRace();
+}
+
+createRace();
+
+</script>
+
+</body>
+</html>
